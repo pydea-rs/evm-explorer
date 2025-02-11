@@ -1,5 +1,5 @@
-/**
-
+/*
+*
  */
 package main
 
@@ -38,6 +38,8 @@ type sysInfo struct {
 	SuggestedGasPrice       *big.Int
 	BlockDetails            []blockInfo
 	AccountDetails          []accountInfo
+	NextPage                int64
+	PrevPage                int64
 }
 
 // for block details
@@ -109,8 +111,7 @@ func weiToEther(wei *big.Int) *big.Float {
 // *********************** block details ***************************************
 
 /*
-	blockInDetails function: fetches the block details based on hash
-
+blockInDetails function: fetches the block details based on hash
 */
 func blockInDetails(w http.ResponseWriter, r *http.Request) {
 	/* local variables */
@@ -152,9 +153,8 @@ func blockInDetails(w http.ResponseWriter, r *http.Request) {
 // *********************** blockshomepage **************************************
 
 /*
-	blockPage function: fetches the block details based on number for the block
-	page
-
+blockPage function: fetches the block details based on number for the block
+page
 */
 func blockPage(w http.ResponseWriter, bn *big.Int) blockInfo {
 	var receipt *types.Receipt
@@ -195,8 +195,7 @@ func blockPage(w http.ResponseWriter, bn *big.Int) blockInfo {
 // *********************** homepage **************************************
 
 /*
-	accountsBalance function: fetches the account details and their balance
-
+accountsBalance function: fetches the account details and their balance
 */
 func getAccountDetails(account common.Address, itr int) accountInfo {
 
@@ -225,8 +224,7 @@ func getAccountDetails(account common.Address, itr int) accountInfo {
 }
 
 /*
-	accountsBalance function: fetches the account details and their balance
-
+accountsBalance function: fetches the account details and their balance
 */
 func showBalanceInfo(w http.ResponseWriter, r *http.Request) {
 	var qss string
@@ -265,9 +263,8 @@ func showBalanceInfo(w http.ResponseWriter, r *http.Request) {
 // *********************** txpage **********************************************
 
 /*
-	txPage function: provide the complete transaction details based on the
-	block number or block hash.
-
+txPage function: provide the complete transaction details based on the
+block number or block hash.
 */
 func txPage(w http.ResponseWriter, r *http.Request) {
 	/* local variables */
@@ -484,8 +481,7 @@ func txDetailsPage(w http.ResponseWriter, r *http.Request) {
 // *********************** On Account of failure *******************************
 
 /*
-	kickBack function: kickback to 404 if any invalid request or failure happens
-
+kickBack function: kickback to 404 if any invalid request or failure happens
 */
 func kickBackErr(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("template/404.html"))
@@ -503,11 +499,21 @@ func kickBack(err error, msg string) {
 // *********************** homepage ********************************************
 
 /*
-	homePage function: serves the content for the main home page.
-
+homePage function: serves the content for the main home page.
 */
 func homePage(w http.ResponseWriter, r *http.Request) {
 	/* local variables */
+	const BLOCKS_IN_PAGE = 10
+
+	params := mux.Vars(r)
+	page := int64(0)
+
+	if strPageParam, ok := params["page"]; ok {
+		if pageParam, err := strconv.Atoi(strPageParam); err == nil {
+			page = int64(pageParam)
+		}
+	}
+
 	var _blockdetails []blockInfo     // to hold the blockNumber
 	var _accountDetails []accountInfo // to hold the blockNumber
 
@@ -543,7 +549,16 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 		kickBack(suggestGasPriceError, "Reason: `@SuggestGasPrice` failed. Couldn't able to fetch Suggested Gas Price")
 
 		// Here it fetches only the lasted 5 block for the home page
-		for x := numBlock.Number.Int64(); x > (numBlock.Number.Int64() - 5); x-- {
+		pageFirstBlock := numBlock.Number.Int64() - BLOCKS_IN_PAGE*page
+		if pageFirstBlock < 0 {
+			pageFirstBlock = BLOCKS_IN_PAGE
+		}
+		pageLastBlock := (pageFirstBlock - BLOCKS_IN_PAGE)
+		if pageFirstBlock < 0 {
+			pageFirstBlock = 0
+		}
+
+		for x := pageFirstBlock; x > pageLastBlock; x-- {
 			if x < 1 {
 				// Todo : break here to overcome negativity
 				break
@@ -571,6 +586,14 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 			itr += 1
 		}
 		// data: values to be rendered
+		nextPage := page + 1
+		if pageLastBlock == 0 {
+			nextPage = page
+		}
+		prevPage := page - 1
+		if prevPage < 0 {
+			prevPage = 0
+		}
 		data := sysInfo{
 			NumBlock:                numBlock.Number.String(),
 			NetworkID:               networkID,
@@ -578,6 +601,8 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 			SuggestedGasPrice:       suggestedGasPrice,
 			BlockDetails:            _blockdetails,
 			AccountDetails:          _accountDetails,
+			NextPage:                nextPage,
+			PrevPage:                prevPage,
 		}
 
 		// mux render
@@ -589,8 +614,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 // *********************** welcome page ****************************************
 
 /*
-	welcomePage function: serves the welcome page.
-
+welcomePage function: serves the welcome page.
 */
 func welcomePage(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("template/welcome.html"))
@@ -619,6 +643,7 @@ func main() {
 
 	// controller
 	gorilla.HandleFunc("/homepage", homePage)
+	gorilla.HandleFunc("/homepage/{page:[a-zA-Z0-9]*}", homePage)
 	gorilla.HandleFunc("/txpage", txPage)
 	gorilla.HandleFunc("/txinfo", txDetailsPage)
 	gorilla.HandleFunc("/blockdetails", blockInDetails)
