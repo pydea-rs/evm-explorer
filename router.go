@@ -84,6 +84,7 @@ type txDetails struct {
 	TxFromAddress string
 	TxData        string
 	TxValue       *big.Int
+	TxValueInEth  *big.Float
 }
 
 // for transaction details
@@ -343,6 +344,7 @@ func txPage(w http.ResponseWriter, r *http.Request) {
 			signer := types.LatestSignerForChainID(tx.ChainId())
 			sender, _ := signer.Sender(tx)
 			fmt.Println("From inside: ", sender.Hex())
+			valueInWei, valueInEth := getTxValues(tx)
 			dt := txDetails{
 				TxHash:        tx.Hash().Hex(),
 				TxGas:         tx.Gas(),
@@ -351,7 +353,8 @@ func txPage(w http.ResponseWriter, r *http.Request) {
 				TxToAddress:   toAddress,
 				TxFromAddress: sender.Hex(),
 				TxData:        hex.EncodeToString(tx.Data()),
-				TxValue:       tx.Value(),
+				TxValue:       valueInWei,
+				TxValueInEth:  valueInEth,
 			}
 			// since transaction are multiple, loading it into an array
 			listTxDetails = append(listTxDetails, dt)
@@ -369,6 +372,12 @@ func txPage(w http.ResponseWriter, r *http.Request) {
 		tmpl := template.Must(template.ParseFiles("template/txPage.html"))
 		tmpl.Execute(w, data)
 	}
+}
+
+func getTxValues(tx *types.Transaction) (*big.Int, *big.Float) {
+	valueInWei := tx.Value()
+	valueInEth := weiToEther(valueInWei)
+	return valueInWei, valueInEth
 }
 
 // /*
@@ -448,6 +457,7 @@ func txDetailsPage(w http.ResponseWriter, r *http.Request) {
 		signer := types.LatestSignerForChainID(tx.ChainId())
 		sender, _ := signer.Sender(tx)
 
+		valueInWei, valueInEth := getTxValues(tx)
 		dt := txDetails{
 			TxHash:        tx.Hash().Hex(),
 			TxGas:         tx.Gas(),
@@ -456,7 +466,8 @@ func txDetailsPage(w http.ResponseWriter, r *http.Request) {
 			TxToAddress:   toAddress,
 			TxFromAddress: sender.Hex(),
 			TxData:        hex.EncodeToString(tx.Data()),
-			TxValue:       tx.Value(),
+			TxValue:       valueInWei,
+			TxValueInEth:  valueInEth,
 		}
 		// since transaction are multiple, loading it into an array
 		listTxDetails = append(listTxDetails, dt)
@@ -623,7 +634,7 @@ func welcomePage(w http.ResponseWriter, r *http.Request) {
 
 // *********************** main ************************************************
 /*
-	main: Main Handler, handles all the incoming request and maps for a route.
+ main: Main Handler, handles all the incoming request and maps for a route.
 
 */
 func main() {
@@ -644,8 +655,8 @@ func main() {
 	// controller
 	gorilla.HandleFunc("/homepage", homePage)
 	gorilla.HandleFunc("/homepage/{page:[a-zA-Z0-9]*}", homePage)
-	gorilla.HandleFunc("/txpage", txPage)
 	gorilla.HandleFunc("/txinfo", txDetailsPage)
+	gorilla.HandleFunc("/txpage", txPage)
 	gorilla.HandleFunc("/blockdetails", blockInDetails)
 	gorilla.HandleFunc("/accInfo", showBalanceInfo)
 	gorilla.HandleFunc("/", welcomePage)

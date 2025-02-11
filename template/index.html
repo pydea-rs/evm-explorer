@@ -287,24 +287,18 @@
                           {{ range .BlockDetails }}
                           <tr>
                             <td id="blockNumber{{ .Block }}">
-                              <a
-                                href=""
-                                onclick="this.href='txpage?blocknumber='+document.getElementById('blockNumber{{ .Block }}').textContent"
+                              <a href="/txpage?blocknumber={{ .Block }}"
                                 >{{ .Block }}</a
                               >
                             </td>
                             <td id="blockHash{{ .BlockHash }}">
-                              <a
-                                href=""
-                                onclick="this.href='blockdetails?blockhash='+document.getElementById('blockHash{{ .BlockHash }}').textContent"
+                              <a href="/blockdetails?blockhash={{ .BlockHash }}"
                                 >{{ .BlockHash }}</a
                               >
                             </td>
                             <td>{{ .Transactions }}</td>
                             <td id="Transactionhash{{ .Transactionhash }}">
-                              <a
-                                href=""
-                                onclick="this.href='txinfo?txhash='+document.getElementById('Transactionhash{{ .Transactionhash }}').textContent"
+                              <a href="/txinfo?txhash={{ .Transactionhash }}"
                                 >{{ .Transactionhash }}</a
                               >
                             </td>
