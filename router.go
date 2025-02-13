@@ -669,6 +669,6 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	fmt.Println("!!!! SERVER STARTED at ADDRESS : 127.0.0.1:5051 !!!!")
+	fmt.Println("!!!! SERVER STARTED @ :5051 !!!!")
 	log.Fatal(srv.ListenAndServe())
 }
