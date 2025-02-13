@@ -204,8 +204,7 @@
                           id="blockHash{{ .BlockHash }}"
                         >
                           <a
-                            href=""
-                            onclick="this.href='blockdetails?blockhash='+document.getElementById('blockHash{{ .BlockHash }}').textContent"
+                            href="/blockdetails?blockhash={{ .BlockHash }}"
                             >{{ .BlockHash }}</a
                           >
                         </div>

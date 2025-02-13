@@ -122,8 +122,8 @@ func blockInDetails(w http.ResponseWriter, r *http.Request) {
 	for _, qs := range r.URL.Query() {
 		blockHash = common.HexToHash(qs[0])
 	}
-
 	// client request for the block
+
 	blockDetails, blockByHashErr := client.BlockByHash(context.Background(), blockHash)
 	kickBack(blockByHashErr,
 		"Reason: `@BlockByHash` failed. Couldn't able to fetch block.")
@@ -287,7 +287,6 @@ func txPage(w http.ResponseWriter, r *http.Request) {
 	// TODO: what if some other happens, has to validate the err
 	if strConvErr != nil {
 		hash := common.HexToHash(qss)
-
 		// getting block with hash
 		block, err = client.BlockByHash(context.Background(), hash)
 
@@ -665,7 +664,7 @@ func main() {
 	// Note: Here gorilla is like passing our own server handler into net/http, by default its false
 	srv := &http.Server{
 		Handler: gorilla,
-		Addr:    "127.0.0.1:5051",
+		Addr:    "0.0.0.0:5051",
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
