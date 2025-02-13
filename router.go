@@ -24,7 +24,7 @@ import (
 // *********************** variable ********************************************
 
 // NetworkHost for holding the host
-var NetworkHost = "http://localhost:8545" // Ganache host
+var NetworkHost = "http://0.0.0.0:8545" // Ganache host
 
 var client *ethclient.Client // for client to access globally
 
@@ -134,7 +134,7 @@ func blockInDetails(w http.ResponseWriter, r *http.Request) {
 	// loading data for rendering
 	data := blockInfo{
 		Block:        blockDetails.Number().String(),
-		BlockHash:    blockDetails.Hash().Hex(),
+		BlockHash:    blockHash.Hex(),
 		BlockNonce:   blockDetails.Nonce(),
 		Transactions: len(blockDetails.Transactions()),
 		GasUsed:      blockDetails.GasUsed(),
@@ -182,7 +182,7 @@ func blockPage(w http.ResponseWriter, bn *big.Int) blockInfo {
 	// loading data for rendering
 	blockData := blockInfo{
 		Block:           bn.String(),
-		BlockHash:       block.Hash().String(),
+		BlockHash:       receipt.BlockHash.Hex(), //block.Hash().String(),
 		BlockNonce:      block.Nonce(),
 		Transactions:    len(block.Transactions()),
 		Transactionhash: tempTxn,
@@ -329,11 +329,14 @@ func txPage(w http.ResponseWriter, r *http.Request) {
 		tmpl.Execute(w, log)
 
 	} else {
-
+		var correctBlockHash *common.Hash = nil // It seems that block.Hash doesn't always returned correct answer; receipt.BlockHash is more reliable.
 		// getting transaction details
 		for _, tx := range block.Transactions() {
 			// check for toAddress
 			receipt, _ := client.TransactionReceipt(context.Background(), tx.Hash())
+			if correctBlockHash == nil {
+				correctBlockHash = &receipt.BlockHash
+			}
 			if tx.To() == nil {
 				toAddress = receipt.ContractAddress.Hex() + " [CONTRACT CREATION]"
 			} else {
@@ -362,7 +365,7 @@ func txPage(w http.ResponseWriter, r *http.Request) {
 		// updating final data into struct for rendering
 		data := txPages{
 			BlockNumber:       block.Number(),
-			BlockHash:         block.Hash().Hex(),
+			BlockHash:         correctBlockHash.Hex(),
 			Totaltransactions: 1,
 			TxDetails:         listTxDetails,
 		}
