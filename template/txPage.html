@@ -203,8 +203,7 @@
                           style="text-align: -webkit-match-; width: 170px"
                           id="blockHash{{ .BlockHash }}"
                         >
-                          <a
-                            href="/blockdetails?blockhash={{ .BlockHash }}"
+                          <a href="/blockdetails?blockhash={{ .BlockHash }}"
                             >{{ .BlockHash }}</a
                           >
                         </div>
@@ -253,6 +252,7 @@
                     </h6>
                   </div>
                   <!-- Card Body -->
+                  {{ range .TxDetails }}
                   <div class="card-body">
                     <div class="table-responsive">
                       <table
@@ -264,40 +264,38 @@
                         <thead></thead>
 
                         <tbody>
-                          {{ range .TxDetails }}
                           <tr>
-                            <th>Transaction Hash</th>
+                            <th>TxHash</th>
                             <td>{{ .TxHash }}</td>
                           </tr>
                           <tr>
-                            <th>Transaction Gas</th>
+                            <th>Gas</th>
                             <td>{{ .TxGas }}</td>
                           </tr>
                           <tr>
-                            <th>Transaction Gas Price</th>
+                            <th>Gas Price</th>
                             <td>{{ .TxGasPrice }}</td>
                           </tr>
                           <tr>
-                            <th>Transaction Nonce</th>
+                            <th>Nonce</th>
                             <td>{{ .TxNonce }}</td>
                           </tr>
                           <tr>
-                            <th>Transaction To</th>
+                            <th>To</th>
                             <td>{{ .TxToAddress }}</td>
                           </tr>
                           <tr>
-                            <th>Transaction From</th>
+                            <th>From</th>
                             <td>{{ .TxFromAddress }}</td>
                           </tr>
                           <tr>
-                            <th>Transaction Value [wei]</th>
+                            <th>Value [wei]</th>
                             <td>{{ .TxValue }}</td>
                           </tr>
                           <tr>
-                            <th>Transaction Value [eth]</th>
+                            <th>Value [eth]</th>
                             <td>{{ .TxValueInEth }}</td>
                           </tr>
-                          {{ end }}
                         </tbody>
                       </table>
                     </div>
@@ -305,6 +303,61 @@
                 </div>
               </div>
             </div>
+            {{ end }}
+
+            {{ if .TokenTransfers }}
+            <div class="row">
+              <div class="col-xl-12 col-lg-12">
+                <div class="card shadow mb-4">
+                  <!-- Card Header -->
+                  <div
+                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between"
+                  >
+                    <h6 class="m-0 font-weight-bold text-primary">
+                      Token Transfer Logs
+                    </h6>
+                  </div>
+                  <!-- Card Body -->
+                  {{ range .TokenTransfers }}
+                  <div class="card-body">
+                    <div class="table-responsive">
+                      <table
+                        class="table table-bordered"
+                        id="logsTable"
+                        width="100%"
+                        cellspacing="0"
+                      >
+                        <thead></thead>
+                        <tbody>
+                          <tr>
+                            <th>Token Contract</th>
+                            <td>{{ .Contract }}</td>
+                          </tr>
+                          <tr>
+                            <th>From</th>
+                            <td>{{ .From }}</td>
+                          </tr>
+                          <tr>
+                            <th>To</th>
+                            <td>{{ .To }}</td>
+                          </tr>
+                          <tr>
+                            <th>Amount [wei]</th>
+                            <td>{{ .Amount }}</td>
+                          </tr>
+                          <tr>
+                            <th>Amount [eth]</th>
+                            <td>{{ .AmountInEth }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {{ end }}
+                </div>
+              </div>
+            </div>
+            {{ end }}
 
             <div class="row">
               <div class="col-xl-12 col-lg-12">

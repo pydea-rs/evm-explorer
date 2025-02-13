@@ -94,6 +94,7 @@ type txPages struct {
 	Totaltransactions int
 	TransactionStatus string
 	TxDetails         []txDetails
+	TokenTransfers    []TokenTransferLog
 }
 
 // for error logs
@@ -331,6 +332,8 @@ func txPage(w http.ResponseWriter, r *http.Request) {
 	} else {
 		var correctBlockHash *common.Hash = nil // It seems that block.Hash doesn't always returned correct answer; receipt.BlockHash is more reliable.
 		// getting transaction details
+		var logs []TokenTransferLog
+
 		for _, tx := range block.Transactions() {
 			// check for toAddress
 			receipt, _ := client.TransactionReceipt(context.Background(), tx.Hash())
@@ -360,6 +363,7 @@ func txPage(w http.ResponseWriter, r *http.Request) {
 			}
 			// since transaction are multiple, loading it into an array
 			listTxDetails = append(listTxDetails, dt)
+			logs = append(logs, ExtractReceiptLogs(receipt)...)
 		}
 
 		// updating final data into struct for rendering
@@ -368,6 +372,7 @@ func txPage(w http.ResponseWriter, r *http.Request) {
 			BlockHash:         correctBlockHash.Hex(),
 			Totaltransactions: 1,
 			TxDetails:         listTxDetails,
+			TokenTransfers:    logs,
 		}
 
 		// render
@@ -383,10 +388,9 @@ func getTxValues(tx *types.Transaction) (*big.Int, *big.Float) {
 }
 
 // /*
-// 	txDetailsPage function: provide the complete transaction details based on the
-// 	transaction hash.
-
-// */
+//
+//	txDetailsPage function: provide the complete transaction details based on the
+//	transaction hash.
 func txDetailsPage(w http.ResponseWriter, r *http.Request) {
 	/* local variables */
 	var qss string
@@ -399,6 +403,7 @@ func txDetailsPage(w http.ResponseWriter, r *http.Request) {
 	var log txLogs
 	var receipt *types.Receipt
 	var receiptStatus string
+
 	// parsing the request
 	for _, qs := range r.URL.Query() {
 		qss = qs[0]
@@ -406,7 +411,6 @@ func txDetailsPage(w http.ResponseWriter, r *http.Request) {
 	_, strConvErr := strconv.Atoi(qss) // converting string into number to pass in client call
 
 	// has to accept either number or hash, so validating
-	// TODO: what if some other happens, has to validate the err
 	if strConvErr != nil {
 		hash := common.HexToHash(qss)
 
@@ -421,8 +425,6 @@ func txDetailsPage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		fmt.Println("Transaction Status : ", receiptStatus)
-		//		fmt.Println("Value : ", tx.Value())
-		//		fmt.Println("contract address : ", receipt.ContractAddress)
 
 		// check whether block number exists or not
 		if err != nil {
@@ -436,57 +438,57 @@ func txDetailsPage(w http.ResponseWriter, r *http.Request) {
 		} else {
 			execStatus = false
 		}
-
 	}
 
-	// based on block availability execute
+	// if transaction does not exist, return 404
 	if execStatus || err != nil {
-		// render
 		tmpl := template.Must(template.ParseFiles("template/404.html"))
 		tmpl.Execute(w, log)
-
-	} else {
-
-		// getting transaction details
-
-		// check for toAddress
-		if tx.To() == nil {
-			toAddress = receipt.ContractAddress.Hex() + " [CONTRACT CREATION]"
-		} else {
-			toAddress = tx.To().Hex()
-		}
-
-		signer := types.LatestSignerForChainID(tx.ChainId())
-		sender, _ := signer.Sender(tx)
-
-		valueInWei, valueInEth := getTxValues(tx)
-		dt := txDetails{
-			TxHash:        tx.Hash().Hex(),
-			TxGas:         tx.Gas(),
-			TxGasPrice:    tx.GasPrice().Uint64(),
-			TxNonce:       tx.Nonce(),
-			TxToAddress:   toAddress,
-			TxFromAddress: sender.Hex(),
-			TxData:        hex.EncodeToString(tx.Data()),
-			TxValue:       valueInWei,
-			TxValueInEth:  valueInEth,
-		}
-		// since transaction are multiple, loading it into an array
-		listTxDetails = append(listTxDetails, dt)
-
-		// updating final data into struct for rendering
-		data := txPages{
-			BlockNumber:       receipt.BlockNumber,
-			BlockHash:         receipt.BlockHash.Hex(),
-			Totaltransactions: 1,
-			TransactionStatus: receiptStatus,
-			TxDetails:         listTxDetails,
-		}
-
-		// render
-		tmpl := template.Must(template.ParseFiles("template/txPage.html"))
-		tmpl.Execute(w, data)
+		return
 	}
+
+	// Getting transaction details
+
+	// check for toAddress
+	if tx.To() == nil {
+		toAddress = receipt.ContractAddress.Hex() + " [CONTRACT CREATION]"
+	} else {
+		toAddress = tx.To().Hex()
+	}
+
+	signer := types.LatestSignerForChainID(tx.ChainId())
+	sender, _ := signer.Sender(tx)
+
+	valueInWei, valueInEth := getTxValues(tx)
+	dt := txDetails{
+		TxHash:        tx.Hash().Hex(),
+		TxGas:         tx.Gas(),
+		TxGasPrice:    tx.GasPrice().Uint64(),
+		TxNonce:       tx.Nonce(),
+		TxToAddress:   toAddress,
+		TxFromAddress: sender.Hex(),
+		TxData:        hex.EncodeToString(tx.Data()),
+		TxValue:       valueInWei,
+		TxValueInEth:  valueInEth,
+	}
+	// add transaction details to list
+	listTxDetails = append(listTxDetails, dt)
+
+	// Extract token transfers from logs
+
+	// Updating final data into struct for rendering
+	data := txPages{
+		BlockNumber:       receipt.BlockNumber,
+		BlockHash:         receipt.BlockHash.Hex(),
+		Totaltransactions: 1,
+		TransactionStatus: receiptStatus,
+		TxDetails:         listTxDetails,
+		TokenTransfers:    ExtractReceiptLogs(receipt), // Include token transfers in data
+	}
+
+	// Render the updated template
+	tmpl := template.Must(template.ParseFiles("template/txPage.html"))
+	tmpl.Execute(w, data)
 }
 
 // *********************** txDetails *******************************************
